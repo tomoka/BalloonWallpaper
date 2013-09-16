@@ -1,8 +1,21 @@
+/*
+ * 開発用master branch
+ * 20130915-01 画像の埋め込み
+ * 20130915-02 時間の表示（テキスト表示）
+ * */
+
+
+
+
+
 package mobi.tomo.balloonwallpaper;
+
+import java.util.Calendar;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.os.Handler;
@@ -38,6 +51,9 @@ public class MainActivity extends WallpaperService {
 	        Bitmap merokumako;
 	        Bitmap merokuma;
 	        
+            int minute_rotate = 1;
+            int second_rotate = 1;
+
 	        private final Runnable mDraw = new Runnable() {
 	            public void run() {
 	                drawFrame();
@@ -118,31 +134,71 @@ public class MainActivity extends WallpaperService {
 				float newWidth = disp.getWidth();
 				float newHeight = disp.getHeight();
 				
-				//画面の中央を出す
-				newWidth = newWidth/2;
-				newHeight = newHeight/2;
-	 
 	            Canvas canvas = null;
 	            canvas = holder.lockCanvas();
 	            
 	        	Matrix matrix = new Matrix();
+	        	Matrix matrix2 = new Matrix();
 	        	Paint paint = new Paint();
 	        	
-	 
+	        	//キャンバスを初期化灰色に染める
+	        	canvas.drawColor(Color.argb(100, 225, 225, 225));
+	        	
+                /*
+                 * 時計表示のための数値取得
+                 */
+	        	//時間取得クラス
+	            Calendar calendar = Calendar.getInstance();
+	            
+	            int year = calendar.get(Calendar.YEAR);
+	            int month = calendar.get(Calendar.MONTH);
+	            int day = calendar.get(Calendar.DATE);
+	            int hour = calendar.get(Calendar.HOUR_OF_DAY);
+	            int minute = calendar.get(Calendar.MINUTE);
+	            int second = calendar.get(Calendar.SECOND);
+	            String clock_count = year + "年" + month + "月" + day + "日" + hour + "時" + minute + "分" + second + "秒";                                                                                           
+
+	            //0の処理
+	            if(minute == 0){
+	            	minute = 1;
+	            }
+	            if(second == 0){
+	            	second = 1;
+	            }
+	            //フォントサイズ
+				paint.setTextSize(30);
+				//フォントカラー
+				paint.setColor(Color.MAGENTA);
+                                                                                                                              
 	            /*
 	            *
 	            *   描画処理
 	            *
 	            */
-								
+	            //時計の針 int で取得の為、intで計算
+	            minute_rotate = 360/minute;
+	            second_rotate = 360/second;
+	            
+				//画面の中央を出す
+				newWidth = newWidth/2-second;
+				newHeight = newHeight/2-second;
+	 								
 				matrix.setTranslate(newWidth, newHeight);
+				//回転にはpostがない。。。
+				matrix.preRotate(second_rotate);
+				matrix2.preRotate(minute_rotate);
 
 	            try {
 	            	//キャンバスがあったら、めろくまこちゃんを書き込む
 	        	    if (canvas != null) {
+	    				//イラスト書き込み
+	        	    	canvas.drawBitmap(merokuma,matrix2,paint);
 	        	    	canvas.drawBitmap(merokumako,matrix,paint);
+	    				//時計書き込み
+	    	            canvas.drawText(clock_count, 0, 100, paint);
 	                }
 	            }catch(ArithmeticException e){
+                    //例外処理があった場合、ログを出す
 	            	String msg = "ArithmeticException e";
 	            	String tag = "ArithmeticException e";
 	            	Log.v(tag, msg);
@@ -153,7 +209,7 @@ public class MainActivity extends WallpaperService {
 	            
 	 
 	            mHandler.removeCallbacks(mDraw);
-	            if (visible) mHandler.postDelayed(mDraw, 25);
+	            if (visible) mHandler.postDelayed(mDraw, 500);
 	 
 	        }
 	 
