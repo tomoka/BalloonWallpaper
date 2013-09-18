@@ -2,6 +2,7 @@
  * 開発用master branch
  * 20130915-01 画像の埋め込み
  * 20130915-02 時間の表示（テキスト表示）
+ * 20130918	   時計素材実装
  * */
 
 
@@ -48,11 +49,20 @@ public class MainActivity extends WallpaperService {
 	 
 	        private boolean visible;
 	        
-	        Bitmap merokumako;
-	        Bitmap merokuma;
+	        Bitmap clock_hour;
+	        Bitmap clock_minute;
+	        Bitmap clock_second;
+	        Bitmap clock_center;
+	        Bitmap clock_background;
 	        
             int minute_rotate = 1;
             int second_rotate = 1;
+            int hour_rotate = 1;
+            
+            int clock_backgroundWidth;
+            int clock_backgroundHeight;
+            float clock_centerWidth;
+            float clock_centerHeight;
 
 	        private final Runnable mDraw = new Runnable() {
 	            public void run() {
@@ -62,8 +72,15 @@ public class MainActivity extends WallpaperService {
 	 
 	        LiveWallpaperEngine() {
 		        //壁紙画像
-	        	merokumako  = BitmapFactory.decodeResource(getResources(), R.drawable.merokumako);
-		        merokuma  = BitmapFactory.decodeResource(getResources(), R.drawable.merokuma);
+	        	clock_hour  = BitmapFactory.decodeResource(getResources(), R.drawable.clockhour);
+	        	clock_minute  = BitmapFactory.decodeResource(getResources(), R.drawable.clockminute);
+	        	clock_second  = BitmapFactory.decodeResource(getResources(), R.drawable.clocksecond);
+	        	clock_center  = BitmapFactory.decodeResource(getResources(), R.drawable.clockcenter);
+	        	clock_background  = BitmapFactory.decodeResource(getResources(), R.drawable.clockbackground);
+	        	clock_backgroundWidth = clock_background.getWidth();
+	        	clock_backgroundHeight = clock_background.getHeight();
+	        	clock_centerWidth = clock_center.getWidth();
+	        	clock_centerHeight = clock_center.getHeight();
 
 		 
 	        }
@@ -134,15 +151,29 @@ public class MainActivity extends WallpaperService {
 				float newWidth = disp.getWidth();
 				float newHeight = disp.getHeight();
 				
+				float percent = newWidth/clock_backgroundWidth;
+				float windowWidth = newWidth/2;
+				float windowHeight = newHeight/2;
+				
+    	    	float clock_minuteWidthsize = clock_minute.getWidth()*percent/2;
+    	    	float clock_secondWidthsize = clock_second.getWidth()*percent/2;
+    	    	float clock_hourWidthsize = clock_hour.getWidth()*percent/2;
+    	    	
+	        	clock_centerWidth = clock_centerWidth*percent/2;
+	        	clock_centerHeight = clock_centerHeight*percent/2;
+
 	            Canvas canvas = null;
 	            canvas = holder.lockCanvas();
 	            
-	        	Matrix matrix = new Matrix();
-	        	Matrix matrix2 = new Matrix();
+	        	Matrix matrix_second = new Matrix();
+	        	Matrix matrix_minute = new Matrix();
+	        	Matrix matrix_hour = new Matrix();
+	        	Matrix matrix_center = new Matrix();
+	        	Matrix matrix_background = new Matrix();
 	        	Paint paint = new Paint();
 	        	
 	        	//キャンバスを初期化灰色に染める
-	        	canvas.drawColor(Color.argb(100, 225, 225, 225));
+	        	canvas.drawColor(Color.argb(255, 255, 255, 255));
 	        	
                 /*
                  * 時計表示のための数値取得
@@ -158,17 +189,10 @@ public class MainActivity extends WallpaperService {
 	            int second = calendar.get(Calendar.SECOND);
 	            String clock_count = year + "年" + month + "月" + day + "日" + hour + "時" + minute + "分" + second + "秒";                                                                                           
 
-	            //0の処理
-	            if(minute == 0){
-	            	minute = 1;
-	            }
-	            if(second == 0){
-	            	second = 1;
-	            }
 	            //フォントサイズ
 				paint.setTextSize(30);
 				//フォントカラー
-				paint.setColor(Color.MAGENTA);
+				paint.setColor(Color.GRAY);
                                                                                                                               
 	            /*
 	            *
@@ -176,24 +200,43 @@ public class MainActivity extends WallpaperService {
 	            *
 	            */
 	            //時計の針 int で取得の為、intで計算
-	            minute_rotate = 360/minute;
-	            second_rotate = 360/second;
-	            
-				//画面の中央を出す
-				newWidth = newWidth/2-second;
-				newHeight = newHeight/2-second;
-	 								
-				matrix.setTranslate(newWidth, newHeight);
-				//回転にはpostがない。。。
-				matrix.preRotate(second_rotate);
-				matrix2.preRotate(minute_rotate);
+	            minute_rotate = 180+6*minute;
+	            second_rotate = 180+6*second;
+	            hour_rotate = 180+6*hour;
+	            	 								
+				matrix_background.setScale(percent, percent);
+				matrix_center.setScale(percent, percent);
 
+				//回転にはpostがない。。。
+				matrix_second.setScale(percent, percent);
+				matrix_second.preRotate(second_rotate);
+
+				matrix_minute.setScale(percent, percent);
+				matrix_minute.preRotate(minute_rotate);
+				
+				matrix_hour.setScale(percent, percent);
+				matrix_hour.preRotate(hour_rotate);
+				
+				//背景の中心の計算
+				clock_backgroundHeight = (int) (clock_backgroundHeight*percent);
+				clock_backgroundHeight = (int) (windowHeight/2-clock_backgroundHeight/2);
+								
+				matrix_center.postTranslate(windowWidth-clock_centerWidth, windowHeight-clock_centerHeight);
+				matrix_background.postTranslate(0, clock_backgroundHeight);
+				
+				matrix_second.postTranslate(windowWidth+clock_secondWidthsize,windowHeight);
+				matrix_minute.postTranslate(windowWidth+clock_minuteWidthsize,windowHeight);
+				matrix_hour.postTranslate(windowWidth+clock_hourWidthsize,windowHeight);
+				
 	            try {
 	            	//キャンバスがあったら、めろくまこちゃんを書き込む
 	        	    if (canvas != null) {
 	    				//イラスト書き込み
-	        	    	canvas.drawBitmap(merokuma,matrix2,paint);
-	        	    	canvas.drawBitmap(merokumako,matrix,paint);
+	        	    	canvas.drawBitmap(clock_background,matrix_background,paint);
+	        	    	canvas.drawBitmap(clock_second,matrix_second,paint);
+	        	    	canvas.drawBitmap(clock_minute,matrix_minute,paint);
+	        	    	canvas.drawBitmap(clock_hour,matrix_hour,paint);
+	        	    	canvas.drawBitmap(clock_center,matrix_center,paint);
 	    				//時計書き込み
 	    	            canvas.drawText(clock_count, 0, 100, paint);
 	                }
@@ -209,7 +252,7 @@ public class MainActivity extends WallpaperService {
 	            
 	 
 	            mHandler.removeCallbacks(mDraw);
-	            if (visible) mHandler.postDelayed(mDraw, 500);
+	            if (visible) mHandler.postDelayed(mDraw, 25);
 	 
 	        }
 	 
